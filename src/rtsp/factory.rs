@@ -36,13 +36,20 @@ impl StreamConfig {
         let (resolution, bitrate, fps, fps_table, bitrate_table) = instance
             .run_passive_task(|cam| {
                 Box::pin(async move {
-                    let infos = cam
-                        .get_stream_info()
-                        .await?
-                        .stream_infos
-                        .iter()
-                        .flat_map(|info| info.encode_tables.clone())
-                        .collect::<Vec<_>>();
+                    let stream_info = cam.get_stream_info().await;
+                    let infos = match stream_info {
+                        Ok(info) => info
+                            .stream_infos
+                            .iter()
+                            .flat_map(|info| info.encode_tables.clone())
+                            .collect::<Vec<_>>(),
+                        Err(e) => {
+                            // Over P2P relay, StreamInfoList (msg 146) may be refused.
+                            // Return defaults; actual values will be updated from stream data.
+                            log::warn!("Could not get stream info: {e}, using stream defaults");
+                            return Ok(([0u32, 0u32], 0u32, 0u32, vec![], vec![]));
+                        }
+                    };
                     if let Some(encode) =
                         infos.iter().find(|encode| encode.name == name.to_string())
                     {

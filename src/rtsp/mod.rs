@@ -261,23 +261,34 @@ async fn camera_main(camera: NeoInstance, rtsp: &NeoRtspServer) -> Result<()> {
         let mut i = IntervalStream::new(interval(Duration::from_secs(15)));
         while i.next().await.is_some() {
             let stream_info = later_camera
-                .run_passive_task(|cam| Box::pin(async move { Ok(cam.get_stream_info().await?) }))
-                .await?;
+                .run_passive_task(|cam| Box::pin(async move { cam.get_stream_info().await }))
+                .await;
 
-            let new_supported_streams = stream_info
-                .stream_infos
-                .iter()
-                .flat_map(|stream_info| stream_info.encode_tables.clone())
-                .flat_map(|encode| match encode.name.as_str() {
-                    "mainStream" => Some(StreamKind::Main),
-                    "subStream" => Some(StreamKind::Sub),
-                    "externStream" => Some(StreamKind::Extern),
-                    new_stream_name => {
-                        log::debug!("New stream name {}", new_stream_name);
-                        None
-                    }
-                })
-                .collect::<HashSet<_>>();
+            let new_supported_streams = match stream_info {
+                Ok(info) => info
+                    .stream_infos
+                    .iter()
+                    .flat_map(|stream_info| stream_info.encode_tables.clone())
+                    .flat_map(|encode| match encode.name.as_str() {
+                        "mainStream" => Some(StreamKind::Main),
+                        "subStream" => Some(StreamKind::Sub),
+                        "externStream" => Some(StreamKind::Extern),
+                        new_stream_name => {
+                            log::debug!("New stream name {}", new_stream_name);
+                            None
+                        }
+                    })
+                    .collect::<HashSet<_>>(),
+                Err(e) => {
+                    // Over P2P relay connections, StreamInfoList (msg 146) may be refused
+                    // (code 300). Fall back to assuming all three stream kinds are available
+                    // so that streaming can still be attempted.
+                    log::warn!("Could not get stream info: {e}, assuming all streams available");
+                    [StreamKind::Main, StreamKind::Sub, StreamKind::Extern]
+                        .into_iter()
+                        .collect()
+                }
+            };
             supported_streams_tx.send_if_modified(|old| {
                 if *old != new_supported_streams {
                     *old = new_supported_streams;
