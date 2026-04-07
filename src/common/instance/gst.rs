@@ -197,7 +197,10 @@ impl NeoInstance {
                     .await
             })
             .and_then(|res| async move {
-                log::debug!("Camera finished streaming: {res:?}");
+                match &res {
+                    Ok(_) => log::debug!("Camera finished streaming"),
+                    Err(e) => log::warn!("Camera stream error: {e:?}"),
+                }
                 Ok(())
             }),
         );
