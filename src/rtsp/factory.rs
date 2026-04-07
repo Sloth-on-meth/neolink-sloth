@@ -352,7 +352,7 @@ fn send_to_sources(
                 send_to_appsrc(vid_src, data, Duration::from_micros(*vid_ts as u64), pools)?;
             }
             const MICROSECONDS: u32 = 1000000;
-            *vid_ts += MICROSECONDS / stream_config.fps;
+            *vid_ts += MICROSECONDS / fps_for_latency(stream_config.fps) as u32;
         }
         _ => {}
     }
