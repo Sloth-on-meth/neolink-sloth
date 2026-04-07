@@ -529,7 +529,7 @@ fn pipe_h264(bin: &Element, stream_config: &StreamConfig) -> Result<Linked> {
 
     source.set_is_live(false);
     source.set_block(false);
-    source.set_min_latency(1000 / (stream_config.fps as i64));
+    source.set_min_latency(1000 / fps_for_latency(stream_config.fps));
     source.set_property("emit-signals", false);
     source.set_max_bytes(buffer_size as u64);
     source.set_do_timestamp(false);
@@ -580,7 +580,7 @@ fn pipe_h265(bin: &Element, stream_config: &StreamConfig) -> Result<Linked> {
         .map_err(|_| anyhow!("Cannot cast to appsrc."))?;
     source.set_is_live(false);
     source.set_block(false);
-    source.set_min_latency(1000 / (stream_config.fps as i64));
+    source.set_min_latency(1000 / fps_for_latency(stream_config.fps));
     source.set_property("emit-signals", false);
     source.set_max_bytes(buffer_size as u64);
     source.set_do_timestamp(false);
@@ -633,7 +633,7 @@ fn pipe_aac(bin: &Element, stream_config: &StreamConfig) -> Result<Linked> {
 
     source.set_is_live(false);
     source.set_block(false);
-    source.set_min_latency(1000 / (stream_config.fps as i64));
+    source.set_min_latency(1000 / fps_for_latency(stream_config.fps));
     source.set_property("emit-signals", false);
     source.set_max_bytes(buffer_size as u64);
     source.set_do_timestamp(false);
@@ -719,7 +719,7 @@ fn pipe_adpcm(bin: &Element, block_size: u32, stream_config: &StreamConfig) -> R
         .map_err(|_| anyhow!("Cannot cast to appsrc."))?;
     source.set_is_live(false);
     source.set_block(false);
-    source.set_min_latency(1000 / (stream_config.fps as i64));
+    source.set_min_latency(1000 / fps_for_latency(stream_config.fps));
     source.set_property("emit-signals", false);
     source.set_max_bytes(buffer_size as u64);
     source.set_do_timestamp(false);
@@ -791,7 +791,7 @@ fn pipe_silence(bin: &Element, stream_config: &StreamConfig) -> Result<Linked> {
 
     source.set_is_live(false);
     source.set_block(false);
-    source.set_min_latency(1000 / (stream_config.fps as i64));
+    source.set_min_latency(1000 / fps_for_latency(stream_config.fps));
     source.set_property("emit-signals", false);
     source.set_max_bytes(buffer_size as u64);
     source.set_do_timestamp(false);
@@ -962,6 +962,10 @@ fn make_queue(name: &str, buffer_size: u32) -> AnyResult<Element> {
             .unwrap_or(0),
     );
     Ok(queue)
+}
+
+fn fps_for_latency(fps: u32) -> i64 {
+    if fps == 0 { 15 } else { fps as i64 }
 }
 
 fn buffer_size(bitrate: u32) -> u32 {
