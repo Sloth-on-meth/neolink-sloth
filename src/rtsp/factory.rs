@@ -585,6 +585,12 @@ fn pipe_h265(bin: &Element, stream_config: &StreamConfig) -> Result<Linked> {
     source.set_max_bytes(buffer_size as u64);
     source.set_do_timestamp(false);
     source.set_stream_type(AppStreamType::Stream);
+    source.set_caps(Some(
+        &Caps::builder("video/x-h265")
+            .field("stream-format", "byte-stream")
+            .field("alignment", "au")
+            .build(),
+    ));
 
     let source = source
         .dynamic_cast::<Element>()
@@ -614,6 +620,8 @@ fn build_h265(bin: &Element, stream_config: &StreamConfig) -> Result<AppSrc> {
         .map_err(|_| anyhow!("Media source's element should be a bin"))?;
 
     let payload = make_element("rtph265pay", "pay0")?;
+    payload.set_property("config-interval", -1i32);
+    payload.set_property_from_str("aggregate-mode", "zero-latency");
     bin.add_many([&payload])?;
     Element::link_many([&linked.output, &payload])?;
     Ok(linked.appsrc)
