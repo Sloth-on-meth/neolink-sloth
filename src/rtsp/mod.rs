@@ -285,7 +285,8 @@ async fn camera_main(camera: NeoInstance, rtsp: &NeoRtspServer) -> Result<()> {
                     // so that streaming can still be attempted.
                     log::warn!("Could not get stream info: {e}, assuming all streams available");
                     [StreamKind::Main, StreamKind::Sub, StreamKind::Extern]
-                        .into_iter()
+                        .iter()
+                        .copied()
                         .collect()
                 }
             };
